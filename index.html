@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KAVOO M — Industrial Chemist & Security Researcher</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0b0c0e;
+      --bg2: rgba(17,18,21,0.75);
+      --bg3: rgba(22,24,28,0.9);
+      --border: rgba(255,255,255,0.07);
+      --border-mid: rgba(255,255,255,0.13);
+      --text: #e8e6e0;
+      --text-muted: #7a7870;
+      --text-dim: #4a4845;
+      --accent: #c8f04a;
+      --accent2: #4af0c8;
+      --accent-dim: rgba(200,240,74,0.08);
+      --font-display: 'Syne', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.65;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── CANVAS ── */
+    #molecular-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* cursor glow */
+    #cursor-glow {
+      position: fixed;
+      width: 260px; height: 260px;
+      pointer-events: none;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(200,240,74,0.045) 0%, transparent 70%);
+      transform: translate(-50%,-50%);
+      z-index: 0;
+    }
+
+    /* everything sits above canvas */
+    nav, main, footer, .status-bar { position: relative; z-index: 1; }
+
+    /* ── LAYOUT ── */
+    .container { max-width: 960px; margin: 0 auto; padding: 0 2rem; }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
+      background: rgba(11,12,14,0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .nav-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+      text-decoration: none;
+    }
+
+    .nav-links { list-style: none; display: flex; gap: 2rem; }
+
+    .nav-links a {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      text-decoration: none;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--accent); }
+
+    /* ── HERO ── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 8rem 0 6rem;
+    }
+
+    /* HUD corner brackets */
+    .hero-hud {
+      position: relative;
+      display: inline-block;
+      padding: 2.5rem 3rem;
+    }
+
+    .hero-hud::before, .hero-hud::after {
+      content: '';
+      position: absolute;
+      width: 28px; height: 28px;
+      border: 1.5px solid var(--accent);
+      opacity: 0.45;
+    }
+    .hero-hud::before { top: 0; left: 0; border-right: none; border-bottom: none; }
+    .hero-hud::after  { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+    .hero-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .hero-eyebrow::before {
+      content: '';
+      display: block;
+      width: 24px; height: 1px;
+      background: var(--accent);
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.4rem, 5vw, 3.8rem);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+      color: #fff;
+    }
+
+    .hero-desc {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.75;
+      max-width: 420px;
+      margin-bottom: 2.5rem;
+    }
+
+    .hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+    .btn-primary {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.75rem 1.5rem;
+      background: var(--accent);
+      color: #0b0c0e;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.2s;
+      font-weight: 500;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+
+    .btn-ghost {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.75rem 1.5rem;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border-mid);
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
+
+    .hero-stats {
+      display: flex;
+      gap: 2.5rem;
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .stat-num {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* ── SECTIONS ── */
+    section { padding: 6rem 0; }
+    section + section { border-top: 1px solid var(--border); }
+
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 0.5rem;
+    }
+
+    h2 {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: #fff;
+      margin-bottom: 3rem;
+    }
+
+    /* ── ABOUT ── */
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: start;
+    }
+
+    .about-text p {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.8;
+      margin-bottom: 1.25rem;
+    }
+    .about-text p:last-child { margin-bottom: 0; }
+
+    .skills-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .skill-item {
+      background: rgba(11,12,14,0.82);
+      backdrop-filter: blur(8px);
+      padding: 1.25rem;
+    }
+
+    .skill-domain {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    .skill-name { font-size: 14px; font-weight: 500; color: var(--text); }
+
+    /* ── PROJECTS ── */
+    .projects-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .project-row {
+      display: grid;
+      grid-template-columns: 80px 1fr auto;
+      align-items: center;
+      gap: 2rem;
+      padding: 1.75rem 2rem;
+      background: rgba(11,12,14,0.72);
+      backdrop-filter: blur(8px);
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+    .project-row:hover { background: rgba(22,24,28,0.92); }
+
+    .project-num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+    }
+
+    .project-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 0.35rem;
+    }
+
+    .project-title {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 0.3rem;
+    }
+
+    .project-desc { font-size: 13px; color: var(--text-muted); }
+
+    .project-arrow {
+      font-size: 18px;
+      color: var(--text-dim);
+      transition: color 0.2s, transform 0.2s;
+    }
+    .project-row:hover .project-arrow { color: var(--accent); transform: translate(3px,-3px); }
+
+    /* ── SECURITY ── */
+    .security-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .sec-card {
+      background: rgba(11,12,14,0.72);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      padding: 1.75rem;
+      transition: border-color 0.2s;
+    }
+    .sec-card:hover { border-color: var(--border-mid); }
+
+    .sec-icon {
+      width: 36px; height: 36px;
+      margin-bottom: 1rem;
+      background: var(--accent-dim);
+      border: 1px solid rgba(200,240,74,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sec-icon svg {
+      width: 16px; height: 16px;
+      stroke: var(--accent);
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .sec-card h3 {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+
+    .sec-card p { font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+
+    /* terminal box */
+    .terminal-box {
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(200,240,74,0.18);
+      padding: 1.5rem 2rem;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 2.1;
+      margin-bottom: 1.5rem;
+    }
+
+    .t-dim   { color: var(--text-dim); }
+    .t-green { color: var(--accent); }
+    .t-cyan  { color: var(--accent2); }
+    .t-fade  { transition: opacity 0.4s; }
+
+    .platforms {
+      padding: 1.5rem;
+      background: rgba(11,12,14,0.72);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .platform-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    .platform-tags { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+    .tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      padding: 4px 10px;
+      border: 1px solid var(--border-mid);
+      color: var(--text-muted);
+    }
+
+    /* ── CONTACT ── */
+    .contact-grid {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .contact-item {
+      background: rgba(11,12,14,0.72);
+      backdrop-filter: blur(8px);
+      padding: 1.75rem;
+      text-decoration: none;
+      color: inherit;
+      transition: background 0.2s;
+      display: block;
+    }
+    .contact-item:hover { background: rgba(22,24,28,0.9); }
+
+    .contact-type {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 0.75rem;
+    }
+
+    .contact-value { font-size: 14px; font-weight: 500; color: var(--text); }
+
+    /* ── STATUS BAR ── */
+    .status-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 36px;
+      border-top: 1px solid var(--border);
+      background: rgba(11,12,14,0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      z-index: 100;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+
+    .status-left, .status-right { display: flex; align-items: center; gap: 0.75rem; color: var(--text-dim); }
+    .status-secure { color: var(--accent); }
+    .status-center { color: var(--accent); transition: opacity 0.35s; }
+
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.25; }
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem 0 4.5rem;
+    }
+
+    .footer-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-note {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-up { opacity: 0; animation: fadeUp 0.6s ease forwards; }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.25s; }
+    .delay-3 { animation-delay: 0.4s; }
+    .delay-4 { animation-delay: 0.55s; }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 720px) {
+      .about-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+      .security-grid { grid-template-columns: 1fr; }
+      .contact-grid { grid-template-columns: 1fr; }
+      .project-row { grid-template-columns: 1fr; gap: 0.5rem; padding: 1.25rem; }
+      .project-num { display: none; }
+      .nav-links { display: none; }
+      .hero-hud { padding: 2rem 1.5rem; }
+      .status-right { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- PARTICLE CANVAS — fixed behind everything -->
+<canvas id="molecular-canvas"></canvas>
+
+<!-- CURSOR GLOW -->
+<div id="cursor-glow"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="#hero" class="nav-logo">Kavoo.Moses</a>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#lab">Lab</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+
+  <!-- HERO -->
+  <section id="hero">
+    <div class="container">
+      <div class="hero-hud">
+        <div class="hero-eyebrow fade-up">Nairobi, Kenya</div>
+
+        <h1 class="fade-up delay-1">Industrial<br>Chemist &amp;<br>Pentester.</h1>
+
+        <p class="hero-desc fade-up delay-2">
+          I operate at the intersection of molecular systems and digital security —
+          building Industrial scale software, pentesting web applications, and running precision
+          laboratory workflows.
+        </p>
+
+        <div class="hero-cta fade-up delay-3">
+          <a href="#lab" class="btn-primary">View Projects</a>
+          <a href="#contact" class="btn-ghost">Get in Touch</a>
+        </div>
+
+        <div class="hero-stats fade-up delay-4">
+          <div class="stat-item">
+            <div class="stat-num">10+</div>
+            <div class="stat-label">SaaS Products</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">2</div>
+            <div class="stat-label">Bug Bounty Platforms</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">&#8734;</div>
+            <div class="stat-label">Curiosity</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about">
+    <div class="container">
+      <div class="section-label">01 — Profile</div>
+      <h2>Built different.</h2>
+      <div class="about-grid reveal">
+        <div class="about-text">
+          <p>I'm Kavoo — an Industrial Chemist by training, a penetration tester by discipline,
+            and a SaaS builder by ambition. Most people pick one lane. I operate in three simultaneously.</p>
+          <p>My chemistry background gives me a precision-first mindset: you measure twice, you cut once,
+            you document everything. That thinking carries directly into security research and software architecture.</p>
+          <p>Currently bug hunting on HackerOne &amp; Bugcrowd while shipping production-grade healthcare
+            and pharmaceutical management systems.</p>
+        </div>
+        <div class="skills-grid">
+          <div class="skill-item">
+            <div class="skill-domain">Chemistry</div>
+            <div class="skill-name">HPLC / QC Analysis</div>
+          </div>
+          <div class="skill-item">
+            <div class="skill-domain">Chemistry</div>
+            <div class="skill-name">Pharma Formulation</div>
+          </div>
+          <div class="skill-item">
+            <div class="skill-domain">Security</div>
+            <div class="skill-name">Web &amp; API Pentesting</div>
+          </div>
+          <div class="skill-item">
+            <div class="skill-domain">Security</div>
+            <div class="skill-name">Pentesting</div>
+          </div>
+          <div class="skill-item">
+            <div class="skill-domain">Engineering</div>
+            <div class="skill-name">SaaS Architecture</div>
+          </div>
+          <div class="skill-item">
+            <div class="skill-domain">Engineering</div>
+            <div class="skill-name">Database Design</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LAB -->
+  <section id="lab">
+    <div class="container">
+      <div class="section-label">02 — The Lab</div>
+      <h2>Things I've built.</h2>
+      <div class="projects-list reveal">
+        <div class="project-row">
+          <div class="project-num">001</div>
+          <div class="project-info">
+            <div class="project-tag">HOSPITAL SOFTWARE</div>
+            <div class="project-title">HOSPITAL MANAGEMENT SYSTEM</div>
+            <div class="project-desc">Real-time hospital management system with modular architecture, patient tracking, and clinical workflows.</div>
+          </div>
+          <div class="project-arrow">&#8599;</div>
+        </div>
+        <div class="project-row">
+          <div class="project-num">002</div>
+          <div class="project-info">
+            <div class="project-tag">PHARMACY SOFTWARE</div>
+            <div class="project-title">Pharma Ledger</div>
+            <div class="project-desc">Stock-flow and financial management optimised for pharmacy audit accuracy and regulatory compliance.</div>
+          </div>
+          <div class="project-arrow">&#8599;</div>
+        </div>
+        <div class="project-row">
+          <div class="project-num">003</div>
+          <div class="project-info">
+            <div class="project-tag">Chemistry · Analytical</div>
+            <div class="project-title">HPLC Assay Workflows</div>
+            <div class="project-desc">Precision chromatography SOPs and data pipelines for pharmaceutical QC departments.</div>
+          </div>
+          <div class="project-arrow">&#8599;</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECURITY -->
+  <section id="security">
+    <div class="container">
+      <div class="section-label">03 — Security</div>
+      <h2>Offensive operations.</h2>
+      <div class="security-grid reveal">
+        <div class="sec-card">
+          <div class="sec-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3>Web Application Testing</h3>
+          <p>Full-scope assessments covering authentication, authorization, injection, and business logic flaws.</p>
+        </div>
+        <div class="sec-card">
+          <div class="sec-icon">
+            <svg viewBox="0 0 24 24"><path d="M21 2H3v16h5v4l4-4h9V2z"/><path d="M8 10h8"/><path d="M8 6h8"/></svg>
+          </div>
+          <h3>API Security</h3>
+          <p>REST and GraphQL endpoint enumeration, parameter tampering, mass assignment, and data exposure testing.</p>
+        </div>
+        <div class="sec-card">
+          <div class="sec-icon">
+            <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+          </div>
+          <h3>Recon &amp; Enumeration</h3>
+          <p>Subdomain discovery, open-port mapping, technology fingerprinting, and attack surface analysis.</p>
+        </div>
+        <div class="sec-card">
+          <div class="sec-icon">
+            <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <h3>Bug Bounty Hunting</h3>
+          <p>Active programs on HackerOne and Bugcrowd. Focus on high-impact critical and high severity findings.</p>
+        </div>
+      </div>
+
+      <!-- terminal log -->
+      <div class="terminal-box reveal">
+        <div><span class="t-dim">$</span> Kavoo --status</div>
+        <div><span class="t-dim">&gt;</span> KAVOO_OS: <span class="t-green t-fade" id="term-log">HPLC Column Pressure: NORMAL</span></div>
+        <div><span class="t-dim">&gt;</span> PLATFORMS: <span class="t-cyan">HackerOne</span> <span class="t-dim">//</span> <span class="t-cyan">Bugcrowd</span></div>
+        <div><span class="t-dim">&gt;</span> RECON: <span class="t-green">ACTIVE</span> <span class="t-dim">//Active Hackerone stats </span></div>
+      </div>
+
+      <div class="platforms reveal">
+        <span class="platform-label">Toolchain</span>
+        <div class="platform-tags">
+          <span class="tag">Burp Suite</span>
+          <span class="tag">Nmap</span>
+          <span class="tag">Metasploit</span>
+          <span class="tag">FFUF</span>
+          <span class="tag">SQLMap</span>
+          <span class="tag">Nuclei</span>
+          <span class="tag">Subfinder</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact">
+    <div class="container">
+      <div class="section-label">04 — Contact</div>
+      <h2>Let's connect.</h2>
+      <div class="contact-grid reveal">
+        <a href="mailto:your@email.com" class="contact-item">
+          <div class="contact-type">Email</div>
+          <div class="contact-value">mmkavoo95@email.com</div>
+        </a>
+        <a href="https://linkedin.com/in/yourprofile" target="_blank" class="contact-item">
+          <div class="contact-type">LinkedIn</div>
+          <div class="contact-value">linkedin.com/in/kavoo_moses</div>
+        </a>
+        <a href="https://github.com/yourhandle" target="_blank" class="contact-item">
+          <div class="contact-type">GitHub</div>
+          <div class="contact-value">github.com/mkavoo95</div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <span class="footer-note">KAVOO.MOSES &copy; 2026</span>
+    <span class="footer-note">Industrial Chemist &middot; Penetration Tester &middot; Dev</span>
+  </div>
+</footer>
+
+<!-- STATUS BAR (fixed bottom) -->
+<div class="status-bar">
+  <div class="status-left">
+    <div class="status-dot"></div>
+    <span>ENCRYPTION: <span class="status-secure">AES-256</span></span>
+  </div>
+  <div class="status-center" id="status-center">KAVOO_OS: STANDBY</div>
+  <div class="status-right">
+    <span>IP: 1.1.1.1</span>
+  </div>
+</div>
+
+<script>
+  /* ────────────────────────────────
+     PARTICLE CANVAS
+     Your original logic, colour-adapted to
+     the accent palette (lime-green + cyan).
+     Particles are subtler so they enhance
+     rather than compete with the content.
+  ──────────────────────────────── */
+  const canvas = document.getElementById('molecular-canvas');
+  const ctx    = canvas.getContext('2d');
+  let   particles = [];
+
+  function resizeCanvas() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  class Particle {
+    constructor() {
+      this.reset();
+    }
+    reset() {
+      this.x      = Math.random() * canvas.width;
+      this.y      = Math.random() * canvas.height;
+      this.size   = Math.random() * 1.6 + 0.4;
+      this.speedX = (Math.random() - 0.5) * 0.35;
+      this.speedY = (Math.random() - 0.5) * 0.35;
+      /* alternate between accent and accent2 */
+      this.isGreen = Math.random() > 0.45;
+    }
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY;
+      if (this.x > canvas.width)  this.x = 0;
+      if (this.x < 0)             this.x = canvas.width;
+      if (this.y > canvas.height) this.y = 0;
+      if (this.y < 0)             this.y = canvas.height;
+    }
+    draw() {
+      ctx.fillStyle = this.isGreen
+              ? 'rgba(200,240,74,0.65)'
+              : 'rgba(74,240,200,0.5)';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function createParticles(n = 85) {
+    particles = [];
+    for (let i = 0; i < n; i++) particles.push(new Particle());
+  }
+
+  function drawConnections() {
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx   = particles[i].x - particles[j].x;
+        const dy   = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 120) {
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(200,240,74,${(1 - dist/120) * 0.14})`;
+          ctx.lineWidth = 0.5;
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => { p.update(); p.draw(); });
+    drawConnections();
+    requestAnimationFrame(animate);
+  }
+
+  createParticles();
+  animate();
+
+  /* ────────────────────────────────
+     CURSOR GLOW
+  ──────────────────────────────── */
+  const glow = document.getElementById('cursor-glow');
+  document.addEventListener('mousemove', e => {
+    glow.style.left = e.clientX + 'px';
+    glow.style.top  = e.clientY + 'px';
+  });
+
+  /* ────────────────────────────────
+     STATUS BAR + TERMINAL LOG ROTATION
+     (your original idea, kept & refined)
+  ──────────────────────────────── */
+  const logLines = [
+    'HPLC Column Pressure: NORMAL',
+    'HMS Database: ENCRYPTED',
+    'Running Nmap Recon...',
+    'Bounty found: Subdomain Takeover',
+    'Analyzing Purity Assay #042',
+    'Vulnerability Scan: 0 Critical',
+    'Pharma_Ledger: Stock Synced',
+    'CTF Status: Rooted Box #12',
+    'API Endpoint: 403 Bypass Found',
+    'GC-MS Analysis: COMPLETE'
+  ];
+
+  const statusEl = document.getElementById('status-center');
+  const termEl   = document.getElementById('term-log');
+
+  function rotateLogs() {
+    const line = logLines[Math.floor(Math.random() * logLines.length)];
+
+    /* status bar fade */
+    statusEl.style.opacity = '0';
+    setTimeout(() => {
+      statusEl.textContent = 'KAVOO_OS: ' + line;
+      statusEl.style.opacity = '1';
+    }, 350);
+
+    /* terminal box */
+    if (termEl) {
+      termEl.style.opacity = '0';
+      setTimeout(() => {
+        termEl.textContent  = line;
+        termEl.style.opacity = '1';
+      }, 350);
+    }
+  }
+
+  setInterval(rotateLogs, 4000);
+
+  /* ────────────────────────────────
+     SCROLL REVEAL
+  ──────────────────────────────── */
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) e.target.classList.add('visible');
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
